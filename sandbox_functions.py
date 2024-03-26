@@ -2,6 +2,8 @@
 import pandas as pd
 from imblearn.over_sampling import SMOTE
 from scipy.stats import ttest_ind
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 def convert_vars_to_factors(data:pd.DataFrame, colnames:list):
     for col in colnames:
@@ -149,12 +151,67 @@ def smote_oversampling(X_vars, y_var):
 def merge_two_subsets(subset_1: pd.DataFrame, subset_2: pd.DataFrame):
    return pd.concat([subset_1, subset_2], ignore_index=True)
 
-def create_balanced_sample(full_data: pd.DataFrame):
-   subsample = stratified_subsampling(full_data.loc[full_data.credit_risk.isin([1])], ['credit_history'], 500)
-   subsample = subsample.drop(subsample.sample(1).index[0])
+def create_balanced_sample(full_data: pd.DataFrame, subsampling_features:list, subsampling_size:int):
+   subsample = stratified_subsampling(full_data.loc[full_data.credit_risk.isin([1])], subsampling_features, subsampling_size)
    subsample = merge_two_subsets(subsample, full_data.loc[full_data.credit_risk.isin([0])])
    subsample = smote_oversampling(X_vars=subsample.drop("credit_risk", axis=1), y_var=subsample.credit_risk)
    return subsample
 
 def verify_sample_belongs_to_population(data:pd.DataFrame, subset: pd.DataFrame):
    return ttest_ind(data, subset)
+
+def standardize_continuous_variables(df: pd.DataFrame, column_list: list):
+    scaler = StandardScaler()
+    df_continuous_columns = df[column_list]
+    df_standardized = pd.DataFrame(scaler.fit_transform(df_continuous_columns), columns=column_list)
+    df.update(df_standardized)
+    return df
+
+def remove_outliers(df, column_list, threshold=1.5):
+    df_outliers = pd.DataFrame()
+
+    for col in column_list:
+        if df[col].dtype != 'object':  # Check if the column is numeric
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - threshold * IQR
+            upper_bound = Q3 + threshold * IQR
+            outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)]
+            df_outliers = pd.concat([df_outliers, outliers])
+
+    df_outliers = df_outliers.drop_duplicates()
+    df_no_outliers = df[~df.index.isin(df_outliers.index)]
+
+    return df_no_outliers, df_outliers
+
+def remove_highly_correlated_variables(df, correlation_threshold):
+
+  correlation_matrix = df.corr()
+  correlated_pairs = []
+  for i in range(len(correlation_matrix)):
+    for j in range(i + 1, len(correlation_matrix)):
+      if abs(correlation_matrix.iloc[i, j]) > correlation_threshold:
+        correlated_pairs.append((i, j))
+
+  for i, j in correlated_pairs:
+    df = df.drop(df.columns[i], axis=1)
+
+  return df
+
+def principal_components_analysis(data:pd.DataFrame):
+  n_components = len(data.columns)
+  # Realizar PCA
+  pca = PCA(n_components=n_components)  # Puedes ajustar el número de componentes según tus necesidades
+  df_pca = pca.fit_transform(data)
+
+  # Crear un DataFrame con los resultados del PCA
+  df_pca_result = pd.DataFrame(data=df_pca, columns=[f'PC{x}' for x in range(n_components) ])
+
+  return df_pca_result, pca
+
+def get_representative_vars_by_pca(data, pca_instance):
+  df_loadings = pd.DataFrame(pca_instance.components_, columns=data.columns)
+
+  top_variables = df_loadings.iloc[0].abs().sort_values(ascending=False).index
+  return top_variables
