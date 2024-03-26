@@ -1,6 +1,7 @@
 # Here will be the auxiliar functions.
 import pandas as pd
 from imblearn.over_sampling import SMOTE
+from scipy.stats import ttest_ind
 
 def convert_vars_to_factors(data:pd.DataFrame, colnames:list):
     for col in colnames:
@@ -125,28 +126,6 @@ def create_data():
 
   data = pd.read_table('./data/SouthGermanCredit.asc', sep=' ', names=names, skiprows=1)
 
-  data = convert_vars_to_factors(data=data, colnames=[
-    'credit_risk',
-    'status',
-    'credit_history',
-    'purpose',
-    'savings',
-    'employment_duration',
-    'installment_rate',
-    'other_debtors',
-    'personal_status_sex',
-    'present_residence',
-    'property',
-    'other_installment_plans',
-    'housing',
-    'number_credits',
-    'job',
-    'people_liable',
-    'telephone',
-    'foreign_worker',
-  ])
-
-  data = assign_categorical_levels(data=data)
 
   return data
 
@@ -164,4 +143,18 @@ def stratified_subsampling(df, stratification_variables, number_of_samples):
 
 def smote_oversampling(X_vars, y_var):
    smote = SMOTE(random_state=5)
-   return smote.fit_resample(X_vars, y_var)
+   x_resampled, y_resampled = smote.fit_resample(X_vars, y_var)
+   return pd.concat([x_resampled, y_resampled], axis=1)
+
+def merge_two_subsets(subset_1: pd.DataFrame, subset_2: pd.DataFrame):
+   return pd.concat([subset_1, subset_2], ignore_index=True)
+
+def create_balanced_sample(full_data: pd.DataFrame):
+   subsample = stratified_subsampling(full_data.loc[full_data.credit_risk.isin([1])], ['credit_history'], 500)
+   subsample = subsample.drop(subsample.sample(1).index[0])
+   subsample = merge_two_subsets(subsample, full_data.loc[full_data.credit_risk.isin([0])])
+   subsample = smote_oversampling(X_vars=subsample.drop("credit_risk", axis=1), y_var=subsample.credit_risk)
+   return subsample
+
+def verify_sample_belongs_to_population(data:pd.DataFrame, subset: pd.DataFrame):
+   return ttest_ind(data, subset)
