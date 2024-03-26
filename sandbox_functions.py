@@ -1,5 +1,6 @@
 # Here will be the auxiliar functions.
 import pandas as pd
+from imblearn.over_sampling import SMOTE
 
 def convert_vars_to_factors(data:pd.DataFrame, colnames:list):
     for col in colnames:
@@ -148,3 +149,19 @@ def create_data():
   data = assign_categorical_levels(data=data)
 
   return data
+
+def stratified_subsampling(df, stratification_variables, number_of_samples):
+
+    df_stratified = df.groupby(stratification_variables)
+    sample = pd.DataFrame()
+    for i, group in df_stratified:
+        sample_size_stratum = round((number_of_samples / df.shape[0]) * group.shape[0])
+        while sample_size_stratum > group.shape[0]:
+            number_of_samples -= 1
+            sample_size_stratum = round((number_of_samples / df.shape[0]) * group.shape[0])
+        sample = pd.concat([sample, group.sample(sample_size_stratum, random_state=42)])
+    return sample
+
+def smote_oversampling(X_vars, y_var):
+   smote = SMOTE(random_state=5)
+   return smote.fit_resample(X_vars, y_var)
