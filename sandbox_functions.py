@@ -5,6 +5,7 @@ from scipy.stats import ttest_ind
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import numpy as np
+import matplotlib.pyplot as plt
 
 def convert_vars_to_factors(data:pd.DataFrame, colnames:list):
     for col in colnames:
@@ -13,6 +14,7 @@ def convert_vars_to_factors(data:pd.DataFrame, colnames:list):
     return data
 
 def assign_categorical_levels(data: pd.DataFrame):
+  # TO-DO: move this data dict to outside of this function. It should be passed as a parameter
   categories_dict = {
     "credit_risk": {
       "categories": ["bad", "good"],
@@ -221,3 +223,13 @@ def get_representative_vars_by_pca(data, pca_instance):
 
   top_variables = df_loadings.iloc[0].abs().sort_values(ascending=False).index
   return top_variables
+
+def plot_cummulated_variance_from_pca(explained_variance_ratio: np.ndarray):
+  explained_variance_ratio_cumsum = np.cumsum(explained_variance_ratio)
+
+  # Graficar la proporción de varianza explicada acumulada
+  plt.plot(range(1, len(explained_variance_ratio_cumsum) + 1), explained_variance_ratio_cumsum, marker='o')
+  plt.title('Proporción de Varianza Explicada Acumulada')
+  plt.xlabel('Número de Componentes Principales')
+  plt.ylabel('Proporción de Varianza Explicada Acumulada')
+  plt.show()
