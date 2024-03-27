@@ -185,7 +185,7 @@ def remove_outliers(df, column_list, threshold=1.5):
   df_outliers = pd.DataFrame()
 
   for col in column_list:
-      if df[col].dtype != 'object':  # Check if the column is numeric
+      if df[col].dtype != 'object':
           Q1 = df[col].quantile(0.25)
           Q3 = df[col].quantile(0.75)
           IQR = Q3 - Q1
@@ -215,11 +215,9 @@ def remove_highly_correlated_variables(df, correlation_threshold):
 
 def principal_components_analysis(data:pd.DataFrame):
   n_components = len(data.columns)
-  # Realizar PCA
-  pca = PCA(n_components=n_components)  # Puedes ajustar el número de componentes según tus necesidades
+  pca = PCA(n_components=n_components)
   df_pca = pca.fit_transform(data)
 
-  # Crear un DataFrame con los resultados del PCA
   df_pca_result = pd.DataFrame(data=df_pca, columns=[f'PC{x}' for x in range(n_components) ])
 
   return df_pca_result, pca
@@ -233,7 +231,6 @@ def get_representative_vars_by_pca(data, pca_instance):
 def plot_cummulated_variance_from_pca(explained_variance_ratio: np.ndarray):
   explained_variance_ratio_cumsum = np.cumsum(explained_variance_ratio)
 
-  # Graficar la proporción de varianza explicada acumulada
   plt.plot(range(1, len(explained_variance_ratio_cumsum) + 1), explained_variance_ratio_cumsum, marker='o')
   plt.title('Proporción de Varianza Explicada Acumulada')
   plt.xlabel('Número de Componentes Principales')
@@ -244,14 +241,15 @@ def split_data_into_test_and_train(data:pd.DataFrame, x_names, y_name):
  x_vars = data.drop(y_name, axis=1)[x_names]
  return train_test_split(x_vars, data[y_name])
 
-def implement_decision_tree(X_train:pd.DataFrame, y_train):
+def implement_decision_tree(X_train:pd.DataFrame, y_train, figsize, fontsize, top=0.9, bottom=0.1, left=0.1, right=0.9, hspace=0.5, wspace=0.5):
     clf = DecisionTreeClassifier(random_state=42)
     clf.fit(X_train, y_train)
 
     class_names_str = [str(class_name) for class_name in clf.classes_]
 
-    plt.figure(figsize=(10, 7))
-    plot_tree(clf, feature_names=X_train.columns, class_names=class_names_str, filled=True, rounded=True)
+    fig, ax = plt.subplots(figsize=figsize)
+    plot_tree(clf, feature_names=X_train.columns, class_names=class_names_str, filled=True, rounded=True, fontsize=fontsize, ax=ax, impurity=False, node_ids=True, proportion=True, precision=2)
+    plt.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
     plt.show()
 
     return clf
@@ -267,7 +265,6 @@ def evaluate_performance_of_decision_tree(clf:DecisionTreeClassifier, X_test, y_
     print('Matriz de confusión:')
     print(conf_matrix)
 
-    # Convertir clf.classes_ a una lista de strings
     class_names = [str(class_name) for class_name in clf.classes_]
 
     report = classification_report(y_test, y_pred, target_names=class_names)
