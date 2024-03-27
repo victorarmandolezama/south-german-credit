@@ -4,6 +4,7 @@ from imblearn.over_sampling import SMOTE
 from scipy.stats import ttest_ind
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+import numpy as np
 
 def convert_vars_to_factors(data:pd.DataFrame, colnames:list):
     for col in colnames:
@@ -141,6 +142,11 @@ def stratified_subsampling(df, stratification_variables, number_of_samples):
             number_of_samples -= 1
             sample_size_stratum = round((number_of_samples / df.shape[0]) * group.shape[0])
         sample = pd.concat([sample, group.sample(sample_size_stratum, random_state=42)])
+    if(len(sample) > number_of_samples):
+      size = len(sample) - number_of_samples
+      random_indexes = np.random.choice(sample.shape[0], size=size, replace=False)
+      return sample.drop(sample.index[random_indexes])
+
     return sample
 
 def smote_oversampling(X_vars, y_var):
