@@ -1,17 +1,22 @@
 # Here will be the auxiliar functions.
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from imblearn.over_sampling import SMOTE
 from scipy.stats import ttest_ind
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import plot_tree
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.preprocessing import LabelEncoder
 
 def convert_vars_to_factors(data:pd.DataFrame, colnames:list):
-    for col in colnames:
-        data[col] = data[col].astype('category')
+  for col in colnames:
+      data[col] = data[col].astype('category')
 
-    return data
+  return data
 
 def assign_categorical_levels(data: pd.DataFrame):
   # TO-DO: move this data dict to outside of this function. It should be passed as a parameter
@@ -114,7 +119,9 @@ def assign_categorical_levels(data: pd.DataFrame):
   }
 
   for column, categories_data in categories_dict.items():
+     le = LabelEncoder()
      data[column] = data[column].replace(to_replace=categories_data["current_values"], value=categories_data["categories"])
+     data[column] = le.fit_transform(data[column])
 
   return data
 
@@ -131,67 +138,66 @@ def create_data():
 
   data = pd.read_table('./data/SouthGermanCredit.asc', sep=' ', names=names, skiprows=1)
 
-
   return data
 
 def stratified_subsampling(df, stratification_variables, number_of_samples):
 
-    df_stratified = df.groupby(stratification_variables)
-    sample = pd.DataFrame()
-    for i, group in df_stratified:
-        sample_size_stratum = round((number_of_samples / df.shape[0]) * group.shape[0])
-        while sample_size_stratum > group.shape[0]:
-            number_of_samples -= 1
-            sample_size_stratum = round((number_of_samples / df.shape[0]) * group.shape[0])
-        sample = pd.concat([sample, group.sample(sample_size_stratum, random_state=42)])
-    if(len(sample) > number_of_samples):
-      size = len(sample) - number_of_samples
-      random_indexes = np.random.choice(sample.shape[0], size=size, replace=False)
-      return sample.drop(sample.index[random_indexes])
+  df_stratified = df.groupby(stratification_variables)
+  sample = pd.DataFrame()
+  for i, group in df_stratified:
+      sample_size_stratum = round((number_of_samples / df.shape[0]) * group.shape[0])
+      while sample_size_stratum > group.shape[0]:
+          number_of_samples -= 1
+          sample_size_stratum = round((number_of_samples / df.shape[0]) * group.shape[0])
+      sample = pd.concat([sample, group.sample(sample_size_stratum, random_state=42)])
+  if(len(sample) > number_of_samples):
+    size = len(sample) - number_of_samples
+    random_indexes = np.random.choice(sample.shape[0], size=size, replace=False)
+    return sample.drop(sample.index[random_indexes])
 
-    return sample
+  return sample
 
 def smote_oversampling(X_vars, y_var):
-   smote = SMOTE(random_state=5)
-   x_resampled, y_resampled = smote.fit_resample(X_vars, y_var)
-   return pd.concat([x_resampled, y_resampled], axis=1)
+  smote = SMOTE(random_state=5)
+  x_resampled, y_resampled = smote.fit_resample(X_vars, y_var)
+  return pd.concat([x_resampled, y_resampled], axis=1)
 
 def merge_two_subsets(subset_1: pd.DataFrame, subset_2: pd.DataFrame):
-   return pd.concat([subset_1, subset_2], ignore_index=True)
+  return pd.concat([subset_1, subset_2], ignore_index=True)
 
 def create_balanced_sample(full_data: pd.DataFrame, subsampling_features:list, subsampling_size:int):
-   subsample = stratified_subsampling(full_data.loc[full_data.credit_risk.isin([1])], subsampling_features, subsampling_size)
-   subsample = merge_two_subsets(subsample, full_data.loc[full_data.credit_risk.isin([0])])
-   subsample = smote_oversampling(X_vars=subsample.drop("credit_risk", axis=1), y_var=subsample.credit_risk)
-   return subsample
+  subsample = stratified_subsampling(full_data.loc[full_data.credit_risk.isin([1])], subsampling_features, subsampling_size)
+  subsample = merge_two_subsets(subsample, full_data.loc[full_data.credit_risk.isin([0])])
+  subsample = smote_oversampling(X_vars=subsample.drop("credit_risk", axis=1), y_var=subsample.credit_risk)
+  return subsample
 
 def verify_sample_belongs_to_population(data:pd.DataFrame, subset: pd.DataFrame):
-   return ttest_ind(data, subset)
+  return ttest_ind(data, subset)
 
 def standardize_continuous_variables(df: pd.DataFrame, column_list: list):
-    scaler = StandardScaler()
-    df_continuous_columns = df[column_list]
-    df_standardized = pd.DataFrame(scaler.fit_transform(df_continuous_columns), columns=column_list)
-    df.update(df_standardized)
-    return df
+  scaler = StandardScaler()
+  df_continuous_columns = df[column_list]
+  df_standardized = pd.DataFrame(scaler.fit_transform(df_continuous_columns), columns=column_list)
+  df.update(df_standardized)
+  return df
 
 def remove_outliers(df, column_list, threshold=1.5):
-    df_outliers = pd.DataFrame()
+  df_outliers = pd.DataFrame()
 
-    for col in column_list:
-        if df[col].dtype != 'object':  # Check if the column is numeric
-            Q1 = df[col].quantile(0.25)
-            Q3 = df[col].quantile(0.75)
-            IQR = Q3 - Q1
-            lower_bound = Q1 - threshold * IQR
-            upper_bound = Q3 + threshold * IQR
-            outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)]
-            df_outliers = pd.concat([df_outliers, outliers])
+  for col in column_list:
+      if df[col].dtype != 'object':  # Check if the column is numeric
+          Q1 = df[col].quantile(0.25)
+          Q3 = df[col].quantile(0.75)
+          IQR = Q3 - Q1
+          lower_bound = Q1 - threshold * IQR
+          upper_bound = Q3 + threshold * IQR
+          outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)]
+          df_outliers = pd.concat([df_outliers, outliers])
 
-    df_outliers = df_outliers.drop_duplicates()
-    df_no_outliers = df[~df.index.isin(df_outliers.index)]
+  df_outliers = df_outliers.drop_duplicates()
+  df_no_outliers = df[~df.index.isin(df_outliers.index)]
 
-    return df_no_outliers, df_outliers
+  return df_no_outliers, df_outliers
 
 def remove_highly_correlated_variables(df, correlation_threshold):
 
@@ -233,3 +239,37 @@ def plot_cummulated_variance_from_pca(explained_variance_ratio: np.ndarray):
   plt.xlabel('Número de Componentes Principales')
   plt.ylabel('Proporción de Varianza Explicada Acumulada')
   plt.show()
+
+def split_data_into_test_and_train(data:pd.DataFrame, x_names, y_name):
+ x_vars = data.drop(y_name, axis=1)[x_names]
+ return train_test_split(x_vars, data[y_name])
+
+def implement_decision_tree(X_train:pd.DataFrame, y_train):
+    clf = DecisionTreeClassifier(random_state=42)
+    clf.fit(X_train, y_train)
+
+    class_names_str = [str(class_name) for class_name in clf.classes_]
+
+    plt.figure(figsize=(10, 7))
+    plot_tree(clf, feature_names=X_train.columns, class_names=class_names_str, filled=True, rounded=True)
+    plt.show()
+
+    return clf
+
+def evaluate_performance_of_decision_tree(clf:DecisionTreeClassifier, X_test, y_test):
+
+    y_pred = clf.predict(X_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f'Precisión del árbol de decisión: {accuracy:.2f}')
+
+    conf_matrix = confusion_matrix(y_test, y_pred)
+    print('Matriz de confusión:')
+    print(conf_matrix)
+
+    # Convertir clf.classes_ a una lista de strings
+    class_names = [str(class_name) for class_name in clf.classes_]
+
+    report = classification_report(y_test, y_pred, target_names=class_names)
+    print('Informe de clasificación:')
+    print(report)
