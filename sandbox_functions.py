@@ -11,6 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.tree import plot_tree
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.preprocessing import LabelEncoder
+import seaborn as sns
 
 def convert_vars_to_factors(data:pd.DataFrame, colnames:list):
   for col in colnames:
@@ -262,11 +263,17 @@ def evaluate_performance_of_decision_tree(clf:DecisionTreeClassifier, X_test, y_
     print(f'Precisión del árbol de decisión: {accuracy:.2f}')
 
     conf_matrix = confusion_matrix(y_test, y_pred)
-    print('Matriz de confusión:')
-    print(conf_matrix)
 
     class_names = [str(class_name) for class_name in clf.classes_]
 
     report = classification_report(y_test, y_pred, target_names=class_names)
     print('Informe de clasificación:')
     print(report)
+
+    plt.figure(figsize=(8, 6))
+    sns.set(font_scale=1.2)
+    sns.heatmap(conf_matrix, annot=True, fmt='g', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.title('Matriz de Confusión')
+    plt.xlabel('Predicciones')
+    plt.ylabel('Valores Verdaderos')
+    plt.show()
