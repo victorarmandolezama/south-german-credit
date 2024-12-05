@@ -127,3 +127,48 @@ def remove_outliers(df, column_list, threshold=1.5):
   df_no_outliers = df[~df.index.isin(df_outliers.index)]
 
   return df_no_outliers, df_outliers
+
+
+def generate_synthetic_variables(df: pd.DataFrame, rules: list) -> pd.DataFrame:
+    """
+    Generates synthetic variables based on specified rules for string values
+    and returns a new DataFrame containing only the synthetic variables.
+
+    Args:
+    df (pd.DataFrame): The original DataFrame containing the data.
+    rules (list): A list of dictionaries containing the rules for generating synthetic variables.
+
+    Returns:
+    pd.DataFrame: A new DataFrame with only the synthetic variables added.
+    """
+    synthetic_df = pd.DataFrame()  # Create an empty DataFrame for synthetic variables
+
+    for rule in rules:
+        name = rule['name']
+        conditions = rule['conditions']
+        operator = rule['operator']
+
+        # Initialize combined_condition based on the first condition
+        first_condition = conditions[0]
+        col = first_condition['col']
+        values = first_condition['values']
+        combined_condition = df[col].isin(values)  # Start with the first condition
+
+        # Combine remaining conditions
+        for condition in conditions[1:]:
+            col = condition['col']
+            values = condition['values']
+            current_condition = df[col].isin(values)  # True if any value matches
+
+            # Combine with the existing condition using the specified operator
+            if operator == 'AND':
+                combined_condition = combined_condition & current_condition
+            elif operator == 'OR':
+                combined_condition = combined_condition | current_condition
+            else:
+                raise ValueError("Operator must be 'AND' or 'OR'.")
+
+        # Add the new column to the synthetic DataFrame
+        synthetic_df[name] = combined_condition.astype(int)
+
+    return synthetic_df
