@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from scipy.stats import chi2_contingency
-
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import statsmodels.api as sm
 
 def get_statistics(df: pd.DataFrame, columnas_continuas, columnas_categoricas):
 
@@ -301,3 +302,116 @@ def chi_squared_test(dummy_data, target_column):
         }
     
     return results
+
+def combine_dataframes(dataframes_list, axis=0, ignore_index=True):
+    """
+    Combina múltiples DataFrames en uno solo.
+    
+    :param dataframes_list: Lista de DataFrames a combinar.
+    :param axis: El eje sobre el cual concatenar. 0 para filas y 1 para columnas.
+    :param ignore_index: Si True, no se conservarán los índices originales.
+    :return: DataFrame combinado.
+    """
+    if not all(isinstance(df, pd.DataFrame) for df in dataframes_list):
+        raise ValueError("Todos los elementos deben ser objetos DataFrame de pandas.")
+
+    combined_df = pd.concat(dataframes_list, axis=axis, ignore_index=ignore_index)
+    return combined_df
+
+def plot_correlation_heatmap(df, figsize=(10, 8), cmap='coolwarm', annot=True):
+    """
+    Genera un mapa de calor de la tabla de correlaciones de un DataFrame.
+    
+    :param df: DataFrame cuyos datos se utilizarán para calcular las correlaciones.
+    :param figsize: Tamaño de la figura del mapa de calor.
+    :param cmap: El mapa de colores a utilizar para el mapa de calor.
+    :param annot: Si True, muestra los valores de correlación en el mapa de calor.
+    """
+    # Calcula la matriz de correlación
+    corr = df.corr()
+
+    # Configura el tamaño de la figura
+    plt.figure(figsize=figsize)
+
+    # Genera el mapa de calor
+    sns.heatmap(corr, cmap=cmap, annot=annot, fmt=".2f", cbar=True, square=True, linewidths=0.5)
+
+    # Configura el título y las etiquetas de los ejes
+    plt.title('Mapa de Calor de Correlaciones', fontsize=16)
+    plt.xticks(rotation=45, ha='right')
+    plt.yticks(rotation=0)
+
+    # Muestra el gráfico
+    plt.tight_layout()
+    plt.show()
+
+def calculate_vif(df):
+    vif_data = pd.DataFrame()
+    vif_data["feature"] = df.columns
+    vif_data["VIF"] = [variance_inflation_factor(df.values, i) for i in range(len(df.columns))]
+    return vif_data
+
+def plot_distributions(df, continuous_vars, categorical_vars, subset_values=None):
+    """
+    Grafica diagramas de violín, de caja y gráficos de barras para variables continuas y categóricas.
+    
+    :param df: DataFrame que contiene los datos.
+    :param continuous_vars: Lista de nombres de las variables continuas.
+    :param categorical_vars: Lista de nombres de las variables categóricas.
+    :param subset_values: Lista opcional de listas que especifican los valores de las variables categóricas a incluir.
+    """
+    for cat_idx, cat_var in enumerate(categorical_vars):
+        # Filtrar los datos si se proporcionan subset_values
+        if subset_values and subset_values[cat_idx]:
+            df_cat = df[df[cat_var].isin(subset_values[cat_idx])]
+        else:
+            df_cat = df
+        
+        # Calcular el número total de subgráficos necesarios
+        num_continuous_vars = len(continuous_vars)
+        num_plots = num_continuous_vars * 2 + 1  # +1 para el gráfico de barras
+        rows = (num_plots // 3) + (1 if num_plots % 3 != 0 else 0)  # Dividir en filas de 3 gráficos
+
+        fig, axes = plt.subplots(rows, 3, figsize=(20, rows * 5))
+        axes = axes.flatten()
+
+        # Gráfico de barras para la variable categórica
+        sns.countplot(x=cat_var, data=df_cat, ax=axes[0])
+        axes[0].set_title(f'Frecuencia de {cat_var}')
+
+        # Graficar diagramas de violín y de caja para cada variable continua
+        plot_idx = 1
+        for cont_var in continuous_vars:
+            sns.violinplot(x=cat_var, y=cont_var, data=df_cat, ax=axes[plot_idx])
+            axes[plot_idx].set_title(f'Diagrama de Violín de {cont_var}')
+            plot_idx += 1
+            sns.boxplot(x=cat_var, y=cont_var, data=df_cat, ax=axes[plot_idx])
+            axes[plot_idx].set_title(f'Diagrama de Caja de {cont_var}')
+            plot_idx += 1
+
+        # Ajustar diseño
+        for ax in axes:
+            ax.set_visible(False)
+        for ax in axes[:num_plots]:
+            ax.set_visible(True)
+
+        plt.tight_layout()
+        plt.show()
+
+
+def binary_logistic_regression(X, y):
+    """
+    Fits a logistic regression model with binary independent variables.
+
+    :param X: Pandas DataFrame with binary independent variables.
+    :param y: Pandas Series with the binary dependent variable.
+    :return: Logistic regression model results.
+    """
+    # Add a constant to the independent variables
+    X_const = sm.add_constant(X)
+
+    # Fit the logistic regression model
+    model = sm.Logit(y, X_const)
+    result = model.fit()
+
+    return {'result': result, 'model': model}
