@@ -3,8 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from scipy.stats import chi2_contingency
+from imblearn.over_sampling import SMOTE
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import statsmodels.api as sm
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, roc_auc_score
 
 def get_statistics(df: pd.DataFrame, columnas_continuas, columnas_categoricas):
 
@@ -278,7 +282,7 @@ def cramers_v(data, categorical_column, target_column):
     r, k = confusion_matrix.shape
     return np.sqrt(phi2 / min(k - 1, r - 1))
 
-def chi_squared_test(dummy_data, target_column):
+def chi_squared_test(dummy_data, target_column, set_extra_info = False):
     # Inicializar un diccionario para almacenar los resultados
     results = {}
     
@@ -297,9 +301,14 @@ def chi_squared_test(dummy_data, target_column):
         results[col] = {
             'chi2_statistic': chi2,
             'p_value': p,
-            'degrees_of_freedom': dof,
-            'expected_frequencies': expected
         }
+
+        if(set_extra_info):
+            results[col] = {
+                **results[col],
+                'degrees_of_freedom': dof,
+                'expected_frequencies': expected
+            }
     
     return results
 
@@ -415,3 +424,46 @@ def binary_logistic_regression(X, y):
     result = model.fit()
 
     return {'result': result, 'model': model}
+
+def sk_binary_logistic_regression(X, y, regularization='none', C=1.0):
+    """
+    Fits a logistic regression model with binary independent variables.
+
+    :param X: Pandas DataFrame with binary independent variables.
+    :param y: Pandas Series with the binary dependent variable.
+    :param regularization: Type of regularization ('none', 'l1' for Lasso, 'l2' for Ridge).
+    :param C: Inverse of regularization strength; smaller values specify stronger regularization.
+    :return: Logistic regression model results and evaluation metrics.
+    """
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Create the logistic regression model with specified regularization
+    if regularization == 'l1':
+        model = LogisticRegression(penalty='l1', C=C, solver='liblinear')
+    elif regularization == 'l2':
+        model = LogisticRegression(penalty='l2', C=C)
+    else:
+        model = LogisticRegression(penalty='none')
+
+    # Fit the logistic regression model
+    model.fit(X_train, y_train)
+
+    # Make predictions
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
+
+    # Generate evaluation metrics
+    report = classification_report(y_test, y_pred)
+    auc = roc_auc_score(y_test, y_prob)
+
+    return {
+        'model': model,
+        'classification_report': report,
+        'AUC-ROC': auc
+    }
+
+def smote_oversampling(X_vars, y_var):
+  smote = SMOTE(random_state=5)
+  x_resampled, y_resampled = smote.fit_resample(X_vars, y_var)
+  return pd.concat([x_resampled, y_resampled], axis=1)
