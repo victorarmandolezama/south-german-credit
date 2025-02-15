@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from main_functions import create_data
+from main_functions import create_data, create_dummy_variables, chi_squared_test
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -16,37 +16,82 @@ data_shape_col2.metric(label="Caracterìsticas", value=south_german_credit.shape
 
 # st.bar_chart(south_german_credit, x='credit_history', y=['age'])
 
-st.markdown('## Histograma')
+st.markdown('## Datos descriptivos')
 
-column_name = st.selectbox('Selecciona una columna numérica:', ["amount", "age", "duration"],)
+import matplotlib.pyplot as plt
+import seaborn as sns
+import streamlit as st
 
-bins = st.slider('Selecciona el número de bins', min_value=1, max_value=100, value=30)
+def plot_histogram_and_metrics(tab, column_name, title, xlabel, ylabel, min_bins=1, max_bins=100, default_bins=30):
+    # Selección del número de bins, usando el rango dinámico
+    bins = tab.slider(f'Selecciona el número de bins para {title}', min_value=min_bins, max_value=max_bins, value=default_bins, key=f"bins_{column_name}")
 
-col1, col2 = st.columns([3, 1], vertical_alignment="center")
+    # Dividir la columna en dos
+    col1, col2 = tab.columns([3, 1], vertical_alignment="center")
 
-with col1:
-    plt.figure(figsize=(10, 6))
-    sns.histplot(data=south_german_credit[column_name], bins=bins, kde=True, color='blue', alpha=0.6)
-    plt.title('Histograma de Datos Aleatorios')
-    plt.xlabel('Valor')
-    plt.ylabel('Densidad')
-    plt.grid(axis='y')
-    col1.pyplot(plt)
+    # Gráfico de histograma
+    with col1:
+        plt.figure(figsize=(10, 6))
+        sns.histplot(data=south_german_credit[column_name], bins=bins, kde=True, color='blue', alpha=0.6)
+        plt.title(title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.grid(axis='y')
+        col1.pyplot(plt)
 
-with col2:
+    # Cálculo de métricas descriptivas
     mean = south_german_credit[column_name].mean()
     median = south_german_credit[column_name].median()
     mode = south_german_credit[column_name].mode()[0]  # mode() devuelve una serie, tomamos el primer valor
     std_dev = south_german_credit[column_name].std()
 
     # Mostrar métricas descriptivas
-    col2.markdown('### Métricas Descriptivas')
-    col2.metric(label='Media', value=f"{mean:.2f}")
-    col2.metric(label='Mediana', value=f"{median:.2f}")
-    col2.metric(label='Moda', value=f"{mode:.2f}")
-    col2.metric(label='Desviación Estándar', value=f"{std_dev:.2f}")
+    with col2:
+        col2.markdown('### Métricas Descriptivas')
+        col2.metric(label='Media', value=f"{mean:.2f}")
+        col2.metric(label='Mediana', value=f"{median:.2f}")
+        col2.metric(label='Moda', value=f"{mode:.2f}")
+        col2.metric(label='Desviación Estándar', value=f"{std_dev:.2f}")
 
-tab1, tab2, tab3 = st.tabs(['Grafico de barras', 'Grafico de caja', 'Grafico de violin'])
+# Crear las pestañas
+descriptive_tab1, descriptive_tab2, descriptive_tab3 = st.tabs(["Monto de crédito solicitado", "Edad de los clientes", "Duración del crédito (en meses)"])
+
+# Llamadas a la función para cada pestaña con parámetros de slider y etiquetas de ejes diferentes
+plot_histogram_and_metrics(
+    descriptive_tab1,
+    "amount",
+    'Histograma de Monto de crédito solicitado',
+    xlabel='Valor del Crédito',
+    ylabel='Densidad',
+     min_bins=10, 
+     max_bins=100, 
+     default_bins=50,
+)
+
+plot_histogram_and_metrics(
+    descriptive_tab2,
+    "age",
+    'Histograma de Edad de los clientes',
+    xlabel='Edad (años)',
+    ylabel='Densidad',
+    min_bins=10, 
+    max_bins=50, 
+    default_bins=30
+)
+
+plot_histogram_and_metrics(
+    descriptive_tab3,
+    "duration",
+    'Histograma de Duración del crédito (en meses)',
+    xlabel='Duración (meses)',
+    ylabel='Densidad',
+    min_bins=5, 
+    max_bins=30, 
+    default_bins=15
+)
+
+
+bar_plot_tab1, bar_plot_tab2, bar_plot_tab3 = st.tabs(['Grafico de barras', 'Grafico de caja', 'Grafico de violin'])
 
 categorical_columns_tuple = (
         "status",
@@ -69,20 +114,20 @@ categorical_columns_tuple = (
         "credit_risk",
     )
 
-barplot_x_axis_option = tab1.selectbox(
+barplot_x_axis_option = bar_plot_tab1.selectbox(
     "Variables en el eje x",
     categorical_columns_tuple,
     0,
     key="barplot_x_axis_option",
 )
 
-barplot_y_axis_option = tab1.selectbox(
+barplot_y_axis_option = bar_plot_tab1.selectbox(
     "Variables en el eje y",
     ("amount", "age", "duration"),
     key="barplot_y_axis_option",
 )
 
-barplot_hue_option = tab1.selectbox(
+barplot_hue_option = bar_plot_tab1.selectbox(
     "Variables en el hue",
     categorical_columns_tuple,
     1,
@@ -99,16 +144,16 @@ plt.xticks(rotation=45)
 plt.grid(axis='y')
 
 
-tab1.pyplot(plt)
+bar_plot_tab1.pyplot(plt)
 
-box_plot_x_axis_option = tab2.selectbox(
+box_plot_x_axis_option = bar_plot_tab2.selectbox(
     "Variables en el eje x",
     categorical_columns_tuple,
     0,
     key="box_plot_x_axis_option",
 )
 
-box_plot_y_axis_option = tab2.selectbox(
+box_plot_y_axis_option = bar_plot_tab2.selectbox(
     "Variables en el eje y",
     ("amount", "age", "duration"),
     key="box_plot_y_axis_option",
@@ -120,22 +165,22 @@ plt.title('Promedio de monto de crédito solicitado por la combinación de estat
 plt.xlabel('Historial de crédito')
 plt.ylabel('Promedio de monto solicitado')
 
-tab2.pyplot(plt)
+bar_plot_tab2.pyplot(plt)
 
-violin_x_axis_option = tab3.selectbox(
+violin_x_axis_option = bar_plot_tab3.selectbox(
     "Variables en el eje x",
     categorical_columns_tuple,
     0,
     key="violin_x_axis_option",
 )
 
-violin_y_axis_option = tab3.selectbox(
+violin_y_axis_option = bar_plot_tab3.selectbox(
     "Variables en el eje y",
     ("amount", "age", "duration"),
     key="violin_y_axis_option",
 )
 
-violin_hue_option = tab3.selectbox(
+violin_hue_option = bar_plot_tab3.selectbox(
     "Variables en el hue",
     categorical_columns_tuple,
     1,
@@ -149,4 +194,24 @@ plt.xlabel('Historial de crédito')
 plt.ylabel('Promedio de monto solicitado')
 plt.legend(title='Estatus')
 
-tab3.pyplot(plt)
+bar_plot_tab3.pyplot(plt)
+
+container = st.container(border=True)
+
+dummy_status_data = create_dummy_variables(south_german_credit, 'status', 'credit_risk')
+dummy_credit_history_data = create_dummy_variables(south_german_credit, 'credit_history', 'credit_risk')
+dummy_purpose_data = create_dummy_variables(south_german_credit, 'purpose', 'credit_risk')
+dummy_savings_data = create_dummy_variables(south_german_credit, 'savings', 'credit_risk')
+dummy_personal_status_sex_data = create_dummy_variables(south_german_credit, 'personal_status_sex', 'credit_risk')
+chi_squared_df = pd.DataFrame.from_dict(
+    {
+        **chi_squared_test(dummy_status_data, 'credit_risk_1'),
+        **chi_squared_test(dummy_credit_history_data, 'credit_risk_1'),
+        **chi_squared_test(dummy_purpose_data, 'credit_risk_1'),
+        **chi_squared_test(dummy_savings_data, 'credit_risk_1'),
+        **chi_squared_test(dummy_personal_status_sex_data, 'credit_risk_1'),
+
+    }, 
+    orient='index')
+
+container.dataframe(chi_squared_df)
