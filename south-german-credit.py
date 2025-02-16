@@ -18,10 +18,6 @@ data_shape_col2.metric(label="Caracterìsticas", value=south_german_credit.shape
 
 st.markdown('## Datos descriptivos')
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import streamlit as st
-
 def plot_histogram_and_metrics(tab, column_name, title, xlabel, ylabel, min_bins=1, max_bins=100, default_bins=30):
     # Selección del número de bins, usando el rango dinámico
     bins = tab.slider(f'Selecciona el número de bins para {title}', min_value=min_bins, max_value=max_bins, value=default_bins, key=f"bins_{column_name}")
@@ -90,111 +86,158 @@ plot_histogram_and_metrics(
     default_bins=15
 )
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+import streamlit as st
 
-bar_plot_tab1, bar_plot_tab2, bar_plot_tab3 = st.tabs(['Grafico de barras', 'Grafico de caja', 'Grafico de violin'])
+# Diccionario de traducción para las métricas
+metric_translation = {
+    "amount": "Monto de crédito",
+    "duration": "Duración en meses",
+    "age": "Edad"
+}
 
-categorical_columns_tuple = (
-        "status",
-        "credit_history",
-        "purpose",
-        "savings",
-        "employment_duration",
-        "installment_rate",
-        "personal_status_sex",
-        "other_debtors",
-        "present_residence",
-        "property",
-        "other_installment_plans",
-        "housing",
-        "number_credits",
-        "job",
-        "people_liable",
-        "telephone",
-        "foreign_worker",
-        "credit_risk",
-    )
+# Diccionario de traducción para las variables categóricas
+categorical_translation = {
+    "status": "Estatus",
+    "credit_history": "Historial de crédito",
+    "purpose": "Propósito",
+    "savings": "Ahorros",
+    "employment_duration": "Duración del empleo",
+    "installment_rate": "Tasa de cuota",
+    "personal_status_sex": "Estado personal y sexo",
+    "other_debtors": "Otros deudores",
+    "present_residence": "Residencia actual",
+    "property": "Propiedad",
+    "other_installment_plans": "Otros planes de cuotas",
+    "housing": "Vivienda",
+    "number_credits": "Número de créditos",
+    "job": "Trabajo",
+    "people_liable": "Personas responsables",
+    "telephone": "Teléfono",
+    "foreign_worker": "Trabajador extranjero",
+    "credit_risk": "Riesgo de crédito",
+}
 
+# Crear las pestañas
+bar_plot_tab1, bar_plot_tab2, bar_plot_tab3 = st.tabs(['Gráfico de barras', 'Gráfico de caja', 'Gráfico de violín'])
+
+# Función para generar gráficos
+def generate_plot(tab, plot_type, x_axis, y_axis, hue=None, title='', xlabel='', ylabel=''):
+    plt.figure(figsize=(12, 6))
+    
+    if plot_type == 'bar':
+        sns.barplot(data=south_german_credit, x=x_axis, y=y_axis, hue=hue, errorbar=None, palette='pastel')
+    elif plot_type == 'box':
+        sns.boxplot(data=south_german_credit, x=x_axis, y=y_axis, hue=hue, palette='pastel')
+    elif plot_type == 'violin':
+        sns.violinplot(data=south_german_credit, x=x_axis, y=y_axis, hue=hue, palette='pastel', width=0.9)
+    
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    if hue:
+        plt.legend(title=hue)
+    plt.xticks(rotation=45)
+    plt.grid(axis='y')
+    
+    tab.pyplot(plt)
+
+# Gráfico de barras
 barplot_x_axis_option = bar_plot_tab1.selectbox(
-    "Variables en el eje x",
-    categorical_columns_tuple,
+    "Seleccione la categoría para el gráfico",
+    list(categorical_translation.values()),  # Usar las traducciones
     0,
-    key="barplot_x_axis_option",
+    key="barplot_x_axis_option"
 )
 
 barplot_y_axis_option = bar_plot_tab1.selectbox(
-    "Variables en el eje y",
-    ("amount", "age", "duration"),
-    key="barplot_y_axis_option",
+    "Seleccione la métrica a visualizar",
+    list(metric_translation.values()),  # Usar las traducciones
+    key="barplot_y_axis_option"
 )
 
 barplot_hue_option = bar_plot_tab1.selectbox(
-    "Variables en el hue",
-    categorical_columns_tuple,
+    "Seleccione la variable para la segmentación",
+    list(categorical_translation.values()),  # Usar las traducciones
     1,
-    key="barplot_hue_option",
+    key="barplot_hue_option"
 )
 
-plt.figure(figsize=(12, 6))
-sns.barplot(data=south_german_credit, x=barplot_x_axis_option, y=barplot_y_axis_option, hue=barplot_hue_option, errorbar=None, palette='pastel')
-plt.title('Promedio de monto de crédito solicitado por la combinación de estatus e historial de crédito (full data)')
-plt.xlabel('Historial de crédito')
-plt.ylabel('Promedio de monto solicitado')
-plt.legend(title='Estatus')
-plt.xticks(rotation=45)
-plt.grid(axis='y')
+generate_plot(
+    bar_plot_tab1,
+    plot_type='bar',
+    x_axis=list(categorical_translation.keys())[list(categorical_translation.values()).index(barplot_x_axis_option)],  # Buscar la llave
+    y_axis=list(metric_translation.keys())[list(metric_translation.values()).index(barplot_y_axis_option)],  # Buscar la llave
+    hue=list(categorical_translation.keys())[list(categorical_translation.values()).index(barplot_hue_option)],  # Buscar la llave
+    title='Análisis de crédito: Gráfico de barras',
+    xlabel='Categoría',
+    ylabel=barplot_y_axis_option
+)
 
-
-bar_plot_tab1.pyplot(plt)
-
+# Gráfico de caja
 box_plot_x_axis_option = bar_plot_tab2.selectbox(
-    "Variables en el eje x",
-    categorical_columns_tuple,
+    "Seleccione la categoría para el gráfico",
+    list(categorical_translation.values()),  # Usar las traducciones
     0,
-    key="box_plot_x_axis_option",
+    key="box_plot_x_axis_option"
 )
 
 box_plot_y_axis_option = bar_plot_tab2.selectbox(
-    "Variables en el eje y",
-    ("amount", "age", "duration"),
-    key="box_plot_y_axis_option",
+    "Seleccione la métrica a visualizar",
+    list(metric_translation.values()),  # Usar las traducciones
+    key="box_plot_y_axis_option"
 )
 
-plt.figure(figsize=(12, 6))
-sns.boxplot(data=south_german_credit, x=box_plot_x_axis_option, y=box_plot_y_axis_option, palette='pastel')
-plt.title('Promedio de monto de crédito solicitado por la combinación de estatus e historial de crédito (full data)')
-plt.xlabel('Historial de crédito')
-plt.ylabel('Promedio de monto solicitado')
+boxplot_hue_option = bar_plot_tab2.selectbox(
+    "Seleccione la variable para la segmentación",
+    list(categorical_translation.values()),  # Usar las traducciones
+    1,
+    key="boxplot_hue_option"
+)
 
-bar_plot_tab2.pyplot(plt)
+generate_plot(
+    bar_plot_tab2,
+    plot_type='box',
+    x_axis=list(categorical_translation.keys())[list(categorical_translation.values()).index(box_plot_x_axis_option)],  # Buscar la llave
+    y_axis=list(metric_translation.keys())[list(metric_translation.values()).index(box_plot_y_axis_option)],  # Buscar la llave
+    hue=list(categorical_translation.keys())[list(categorical_translation.values()).index(boxplot_hue_option)],  # Buscar la llave
+    title='Análisis de crédito: Gráfico de caja',
+    xlabel='Categoría',
+    ylabel=box_plot_y_axis_option
+)
 
+# Gráfico de violín
 violin_x_axis_option = bar_plot_tab3.selectbox(
-    "Variables en el eje x",
-    categorical_columns_tuple,
+    "Seleccione la categoría para el gráfico",
+    list(categorical_translation.values()),  # Usar las traducciones
     0,
-    key="violin_x_axis_option",
+    key="violin_x_axis_option"
 )
 
 violin_y_axis_option = bar_plot_tab3.selectbox(
-    "Variables en el eje y",
-    ("amount", "age", "duration"),
-    key="violin_y_axis_option",
+    "Seleccione la métrica a visualizar",
+    list(metric_translation.values()),  # Usar las traducciones
+    key="violin_y_axis_option"
 )
 
 violin_hue_option = bar_plot_tab3.selectbox(
-    "Variables en el hue",
-    categorical_columns_tuple,
+    "Seleccione la variable para la segmentación",
+    list(categorical_translation.values()),  # Usar las traducciones
     1,
-    key="violin_hue_option",
+    key="violin_hue_option"
 )
 
-plt.figure(figsize=(15, 10))
-sns.violinplot(data=south_german_credit, x=violin_x_axis_option, y=violin_y_axis_option, hue=violin_hue_option, palette='pastel', width=0.9)
-plt.title('Gráfico de violín de historial de crédito por monto de crédito solicitado y estatus')
-plt.xlabel('Historial de crédito')
-plt.ylabel('Promedio de monto solicitado')
-plt.legend(title='Estatus')
-
-bar_plot_tab3.pyplot(plt)
+generate_plot(
+    bar_plot_tab3,
+    plot_type='violin',
+    x_axis=list(categorical_translation.keys())[list(categorical_translation.values()).index(violin_x_axis_option)],  # Buscar la llave
+    y_axis=list(metric_translation.keys())[list(metric_translation.values()).index(violin_y_axis_option)],  # Buscar la llave
+    hue=list(categorical_translation.keys())[list(categorical_translation.values()).index(violin_hue_option)],  # Buscar la llave
+    title='Análisis de crédito: Gráfico de violín',
+    xlabel='Categoría',
+    ylabel=violin_y_axis_option
+)
 
 container = st.container(border=True)
 
