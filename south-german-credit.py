@@ -14,9 +14,15 @@ data_shape_col1, data_shape_col2 = st.columns(2, vertical_alignment="center")
 data_shape_col1.metric(label="Registros", value=south_german_credit.shape[0])
 data_shape_col2.metric(label="Caracterìsticas", value=south_german_credit.shape[1])
 
+st.divider()
+
 # st.bar_chart(south_german_credit, x='credit_history', y=['age'])
 
 st.markdown('## Datos descriptivos')
+
+st.divider()
+
+st.markdown('### Histogramas')
 
 def plot_histogram_and_metrics(tab, column_name, title, xlabel, ylabel, min_bins=1, max_bins=100, default_bins=30):
     # Selección del número de bins, usando el rango dinámico
@@ -45,9 +51,9 @@ def plot_histogram_and_metrics(tab, column_name, title, xlabel, ylabel, min_bins
     with col2:
         col2.markdown('### Métricas Descriptivas')
         col2.metric(label='Media', value=f"{mean:.2f}")
+        col2.metric(label='Desviación Estándar', value=f"{std_dev:.2f}")
         col2.metric(label='Mediana', value=f"{median:.2f}")
         col2.metric(label='Moda', value=f"{mode:.2f}")
-        col2.metric(label='Desviación Estándar', value=f"{std_dev:.2f}")
 
 # Crear las pestañas
 descriptive_tab1, descriptive_tab2, descriptive_tab3 = st.tabs(["Monto de crédito solicitado", "Edad de los clientes", "Duración del crédito (en meses)"])
@@ -86,10 +92,6 @@ plot_histogram_and_metrics(
     default_bins=15
 )
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import streamlit as st
-
 # Diccionario de traducción para las métricas
 metric_translation = {
     "amount": "Monto de crédito",
@@ -119,6 +121,30 @@ categorical_translation = {
     "credit_risk": "Riesgo de crédito",
 }
 
+st.divider()
+
+st.markdown('### Barras, cajas y violines')
+
+x_axis_option = st.selectbox(
+    "Seleccione la categoría para el gráfico",
+    list(categorical_translation.values()),  # Usar las traducciones
+    0,
+    key="x_axis_option"
+)
+
+y_axis_option = st.selectbox(
+    "Seleccione la métrica a visualizar",
+    list(metric_translation.values()),  # Usar las traducciones
+    key="y_axis_option"
+)
+
+hue_option = st.selectbox(
+    "Seleccione la variable para la segmentación",
+    list(categorical_translation.values()),  # Usar las traducciones
+    1,
+    key="hue_option"
+)
+
 # Crear las pestañas
 bar_plot_tab1, bar_plot_tab2, bar_plot_tab3 = st.tabs(['Gráfico de barras', 'Gráfico de caja', 'Gráfico de violín'])
 
@@ -137,107 +163,53 @@ def generate_plot(tab, plot_type, x_axis, y_axis, hue=None, title='', xlabel='',
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     if hue:
-        plt.legend(title=hue)
+        plt.legend(title=categorical_translation[hue])
     plt.xticks(rotation=45)
     plt.grid(axis='y')
     
     tab.pyplot(plt)
 
 # Gráfico de barras
-barplot_x_axis_option = bar_plot_tab1.selectbox(
-    "Seleccione la categoría para el gráfico",
-    list(categorical_translation.values()),  # Usar las traducciones
-    0,
-    key="barplot_x_axis_option"
-)
-
-barplot_y_axis_option = bar_plot_tab1.selectbox(
-    "Seleccione la métrica a visualizar",
-    list(metric_translation.values()),  # Usar las traducciones
-    key="barplot_y_axis_option"
-)
-
-barplot_hue_option = bar_plot_tab1.selectbox(
-    "Seleccione la variable para la segmentación",
-    list(categorical_translation.values()),  # Usar las traducciones
-    1,
-    key="barplot_hue_option"
-)
+x_axis_name=list(categorical_translation.keys())[list(categorical_translation.values()).index(x_axis_option)]
+y_axis_name=list(metric_translation.keys())[list(metric_translation.values()).index(y_axis_option)]
+hue_name=list(categorical_translation.keys())[list(categorical_translation.values()).index(hue_option)]
 
 generate_plot(
     bar_plot_tab1,
     plot_type='bar',
-    x_axis=list(categorical_translation.keys())[list(categorical_translation.values()).index(barplot_x_axis_option)],  # Buscar la llave
-    y_axis=list(metric_translation.keys())[list(metric_translation.values()).index(barplot_y_axis_option)],  # Buscar la llave
-    hue=list(categorical_translation.keys())[list(categorical_translation.values()).index(barplot_hue_option)],  # Buscar la llave
+    x_axis=x_axis_name,
+    y_axis=y_axis_name,
+    hue=hue_name,
     title='Análisis de crédito: Gráfico de barras',
-    xlabel='Categoría',
-    ylabel=barplot_y_axis_option
-)
-
-# Gráfico de caja
-box_plot_x_axis_option = bar_plot_tab2.selectbox(
-    "Seleccione la categoría para el gráfico",
-    list(categorical_translation.values()),  # Usar las traducciones
-    0,
-    key="box_plot_x_axis_option"
-)
-
-box_plot_y_axis_option = bar_plot_tab2.selectbox(
-    "Seleccione la métrica a visualizar",
-    list(metric_translation.values()),  # Usar las traducciones
-    key="box_plot_y_axis_option"
-)
-
-boxplot_hue_option = bar_plot_tab2.selectbox(
-    "Seleccione la variable para la segmentación",
-    list(categorical_translation.values()),  # Usar las traducciones
-    1,
-    key="boxplot_hue_option"
+    xlabel=f'Categoría: {categorical_translation[x_axis_name]}',
+    ylabel=y_axis_option,
 )
 
 generate_plot(
     bar_plot_tab2,
     plot_type='box',
-    x_axis=list(categorical_translation.keys())[list(categorical_translation.values()).index(box_plot_x_axis_option)],  # Buscar la llave
-    y_axis=list(metric_translation.keys())[list(metric_translation.values()).index(box_plot_y_axis_option)],  # Buscar la llave
-    hue=list(categorical_translation.keys())[list(categorical_translation.values()).index(boxplot_hue_option)],  # Buscar la llave
+    x_axis=x_axis_name,
+    y_axis=y_axis_name,
+    hue=hue_name,
     title='Análisis de crédito: Gráfico de caja',
-    xlabel='Categoría',
-    ylabel=box_plot_y_axis_option
-)
-
-# Gráfico de violín
-violin_x_axis_option = bar_plot_tab3.selectbox(
-    "Seleccione la categoría para el gráfico",
-    list(categorical_translation.values()),  # Usar las traducciones
-    0,
-    key="violin_x_axis_option"
-)
-
-violin_y_axis_option = bar_plot_tab3.selectbox(
-    "Seleccione la métrica a visualizar",
-    list(metric_translation.values()),  # Usar las traducciones
-    key="violin_y_axis_option"
-)
-
-violin_hue_option = bar_plot_tab3.selectbox(
-    "Seleccione la variable para la segmentación",
-    list(categorical_translation.values()),  # Usar las traducciones
-    1,
-    key="violin_hue_option"
+    xlabel=f'Categoría: {categorical_translation[x_axis_name]}',
+    ylabel=y_axis_option
 )
 
 generate_plot(
     bar_plot_tab3,
     plot_type='violin',
-    x_axis=list(categorical_translation.keys())[list(categorical_translation.values()).index(violin_x_axis_option)],  # Buscar la llave
-    y_axis=list(metric_translation.keys())[list(metric_translation.values()).index(violin_y_axis_option)],  # Buscar la llave
-    hue=list(categorical_translation.keys())[list(categorical_translation.values()).index(violin_hue_option)],  # Buscar la llave
+    x_axis=x_axis_name,
+    y_axis=y_axis_name,
+    hue=hue_name,
     title='Análisis de crédito: Gráfico de violín',
-    xlabel='Categoría',
-    ylabel=violin_y_axis_option
+    xlabel=f'Categoría: {categorical_translation[x_axis_name]}',
+    ylabel=y_axis_option
 )
+
+st.divider()
+
+st.markdown('### Pruebas Xi cuadrada')
 
 container = st.container(border=True)
 
