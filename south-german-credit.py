@@ -4,6 +4,7 @@ import numpy as np
 from main_functions import create_data, create_dummy_variables, chi_squared_test
 import seaborn as sns
 import matplotlib.pyplot as plt
+from streamlit_utils import plot_histogram_and_metrics, generate_plot, funcion_carrusel, categorical_translation, metric_translation
 
 south_german_credit = create_data()
 
@@ -24,42 +25,12 @@ st.divider()
 
 st.markdown('### Histogramas')
 
-def plot_histogram_and_metrics(tab, column_name, title, xlabel, ylabel, min_bins=1, max_bins=100, default_bins=30):
-    # Selección del número de bins, usando el rango dinámico
-    bins = tab.slider(f'Selecciona el número de bins para {title}', min_value=min_bins, max_value=max_bins, value=default_bins, key=f"bins_{column_name}")
-
-    # Dividir la columna en dos
-    col1, col2 = tab.columns([3, 1], vertical_alignment="center")
-
-    # Gráfico de histograma
-    with col1:
-        plt.figure(figsize=(10, 6))
-        sns.histplot(data=south_german_credit[column_name], bins=bins, kde=True, color='blue', alpha=0.6)
-        plt.title(title)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.grid(axis='y')
-        col1.pyplot(plt)
-
-    # Cálculo de métricas descriptivas
-    mean = south_german_credit[column_name].mean()
-    median = south_german_credit[column_name].median()
-    mode = south_german_credit[column_name].mode()[0]  # mode() devuelve una serie, tomamos el primer valor
-    std_dev = south_german_credit[column_name].std()
-
-    # Mostrar métricas descriptivas
-    with col2:
-        col2.markdown('### Métricas Descriptivas')
-        col2.metric(label='Media', value=f"{mean:.2f}")
-        col2.metric(label='Desviación Estándar', value=f"{std_dev:.2f}")
-        col2.metric(label='Mediana', value=f"{median:.2f}")
-        col2.metric(label='Moda', value=f"{mode:.2f}")
-
 # Crear las pestañas
 descriptive_tab1, descriptive_tab2, descriptive_tab3 = st.tabs(["Monto de crédito solicitado", "Edad de los clientes", "Duración del crédito (en meses)"])
 
 # Llamadas a la función para cada pestaña con parámetros de slider y etiquetas de ejes diferentes
 plot_histogram_and_metrics(
+    south_german_credit,
     descriptive_tab1,
     "amount",
     'Histograma de Monto de crédito solicitado',
@@ -71,6 +42,7 @@ plot_histogram_and_metrics(
 )
 
 plot_histogram_and_metrics(
+    south_german_credit,
     descriptive_tab2,
     "age",
     'Histograma de Edad de los clientes',
@@ -82,6 +54,7 @@ plot_histogram_and_metrics(
 )
 
 plot_histogram_and_metrics(
+    south_german_credit,
     descriptive_tab3,
     "duration",
     'Histograma de Duración del crédito (en meses)',
@@ -91,35 +64,6 @@ plot_histogram_and_metrics(
     max_bins=30, 
     default_bins=15
 )
-
-# Diccionario de traducción para las métricas
-metric_translation = {
-    "amount": "Monto de crédito",
-    "duration": "Duración en meses",
-    "age": "Edad"
-}
-
-# Diccionario de traducción para las variables categóricas
-categorical_translation = {
-    "status": "Estatus",
-    "credit_history": "Historial de crédito",
-    "purpose": "Propósito",
-    "savings": "Ahorros",
-    "employment_duration": "Duración del empleo",
-    "installment_rate": "Tasa de cuota",
-    "personal_status_sex": "Estado personal y sexo",
-    "other_debtors": "Otros deudores",
-    "present_residence": "Residencia actual",
-    "property": "Propiedad",
-    "other_installment_plans": "Otros planes de cuotas",
-    "housing": "Vivienda",
-    "number_credits": "Número de créditos",
-    "job": "Trabajo",
-    "people_liable": "Personas responsables",
-    "telephone": "Teléfono",
-    "foreign_worker": "Trabajador extranjero",
-    "credit_risk": "Riesgo de crédito",
-}
 
 st.divider()
 
@@ -146,28 +90,7 @@ hue_option = st.selectbox(
 )
 
 # Crear las pestañas
-bar_plot_tab1, bar_plot_tab2, bar_plot_tab3 = st.tabs(['Gráfico de barras', 'Gráfico de caja', 'Gráfico de violín'])
-
-# Función para generar gráficos
-def generate_plot(tab, plot_type, x_axis, y_axis, hue=None, title='', xlabel='', ylabel=''):
-    plt.figure(figsize=(12, 6))
-    
-    if plot_type == 'bar':
-        sns.barplot(data=south_german_credit, x=x_axis, y=y_axis, hue=hue, errorbar=None, palette='pastel')
-    elif plot_type == 'box':
-        sns.boxplot(data=south_german_credit, x=x_axis, y=y_axis, hue=hue, palette='pastel')
-    elif plot_type == 'violin':
-        sns.violinplot(data=south_german_credit, x=x_axis, y=y_axis, hue=hue, palette='pastel', width=0.9)
-    
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    if hue:
-        plt.legend(title=categorical_translation[hue])
-    plt.xticks(rotation=45)
-    plt.grid(axis='y')
-    
-    tab.pyplot(plt)
+bar_plot_tab1, bar_plot_tab2, bar_plot_tab3, bar_plot_tab4 = st.tabs(['Gráfico de barras', 'Gráfico de caja', 'Gráfico de violín', 'Conteos'])
 
 # Gráfico de barras
 x_axis_name=list(categorical_translation.keys())[list(categorical_translation.values()).index(x_axis_option)]
@@ -175,6 +98,7 @@ y_axis_name=list(metric_translation.keys())[list(metric_translation.values()).in
 hue_name=list(categorical_translation.keys())[list(categorical_translation.values()).index(hue_option)]
 
 generate_plot(
+    south_german_credit,
     bar_plot_tab1,
     plot_type='bar',
     x_axis=x_axis_name,
@@ -186,6 +110,7 @@ generate_plot(
 )
 
 generate_plot(
+    south_german_credit,
     bar_plot_tab2,
     plot_type='box',
     x_axis=x_axis_name,
@@ -197,6 +122,7 @@ generate_plot(
 )
 
 generate_plot(
+    south_german_credit,
     bar_plot_tab3,
     plot_type='violin',
     x_axis=x_axis_name,
@@ -206,6 +132,20 @@ generate_plot(
     xlabel=f'Categoría: {categorical_translation[x_axis_name]}',
     ylabel=y_axis_option
 )
+
+generate_plot(
+    south_german_credit,
+    bar_plot_tab4,
+    plot_type='count',
+    x_axis=x_axis_name,
+    y_axis=y_axis_name,
+    hue=hue_name,
+    title='Análisis de crédito: Conteos',
+    xlabel=f'Categoría: {categorical_translation[x_axis_name]}',
+    ylabel='Conteos'
+)
+
+funcion_carrusel(data=south_german_credit, selected_column1=x_axis_name, selected_column2=hue_name, hue_column=y_axis_name)
 
 st.divider()
 
