@@ -195,7 +195,7 @@ def generate_plot(data, tab, plot_type, x_axis, y_axis, hue=None, title='', xlab
     tab.pyplot(plt)
 
 def funcion_carrusel(data, selected_column1, selected_column2, hue_column):
-    st.title("Función Carrusel")
+    st.title("Descripción de variables categóricas cruzadas")
 
     # Crear DataFrames para las leyendas basándose en las categorías
     df_legends_column1 = pd.DataFrame(list(legends[selected_column1].items()), columns=['Categoría', 'Descripción'])
